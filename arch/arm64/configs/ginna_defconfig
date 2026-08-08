@@ -675,4 +675,7 @@ CONFIG_CRYPTO_DEV_QCOM_ICE=y
 CONFIG_SYSTEM_TRUSTED_KEYS="certs/mmi_verity_keys.pem"
 CONFIG_QMI_ENCDEC=y
 
+# Shut-up the compiler about unused functions in the kernel.
 CONFIG_BUILD_ARM64_DT_OVERLAY=y
+CONFIG_MSM_EXT_DISPLAY=y
+# CONFIG_SND_SOC_MSM_HDMI_CODEC_RX is not set
