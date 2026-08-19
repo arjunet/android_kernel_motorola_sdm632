@@ -3229,6 +3229,16 @@ static void binder_transaction(struct binder_proc *proc,
 
 		security_task_getsecid(proc->tsk, &secid);
 		ret = security_secid_to_secctx(secid, &secctx, &secctx_sz);
+		if (ret == -EOPNOTSUPP) {
+			/*
+			 * Halium runs Android on an AppArmor host without SELinux
+			 * security-context conversion. A missing optional transaction
+			 * context must not abort Binder IPC for stock vendor services.
+			 */
+			ret = 0;
+			secctx = NULL;
+			secctx_sz = 0;
+		}
 		if (ret) {
 			return_error = BR_FAILED_REPLY;
 			return_error_param = ret;
