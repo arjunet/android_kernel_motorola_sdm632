@@ -1640,7 +1640,7 @@ static __latent_entropy struct task_struct *copy_process(
 		if (get_user(reserved, parent_tidptr))
 			return ERR_PTR(-EFAULT);
 
-		if (reserved != 0 && !(is_compat_task() && reserved == -1))
+		if (reserved != 0 && !(is_compat_task() && reserved == -EBADF))
 			return ERR_PTR(-EINVAL);
 	}
 
