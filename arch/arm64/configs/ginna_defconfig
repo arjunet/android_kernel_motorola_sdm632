@@ -684,9 +684,3 @@ CONFIG_CMDLINE="console=tty0 androidboot.console=ttyMSM0 androidboot.hardware=qc
 
 CONFIG_CMDLINE_FORCE=y
 # CONFIG_CMDLINE_EXTEND is not set
-
-# Touchscreen driver forcing
-# CONFIG_MODULE_SIG is not set
-# CONFIG_MODULE_SIG_FORCE is not set
-# CONFIG_MODVERSIONS is not set
-CONFIG_MODULE_FORCE_LOAD=y
