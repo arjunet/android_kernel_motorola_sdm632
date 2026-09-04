@@ -331,6 +331,15 @@ CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_PROXIMITY=y
 CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_DEVICE_ACCESS=y
 # CONFIG_TOUCHSCREEN_SYNAPTICS_DSX is not set
 CONFIG_TOUCHSCREEN_GEN_VKEYS=y
+# ginna touch: physical panel is dual-sourced (DT node soc/spi@7af7000/spidev@0,
+# compatible = "chipone-tddi", "focaltech,fts") but neither driver ever made it
+# into this kernel-msm/LineageOS tree - only ported in from Motorola's
+# out-of-tree motorola-kernel-modules. Both =y (never loadable modules) so
+# CONFIG_MODULE_SIG_FORCE/CONFIG_MODVERSIONS never come into play. Whichever
+# chip is actually present in this unit will bind; the other's probe just
+# fails cleanly.
+CONFIG_TOUCHSCREEN_CHIPONE_TDDI_MMI=y
+CONFIG_TOUCHSCREEN_FOCALTECH_0FLASH_MMI=y
 CONFIG_INPUT_MISC=y
 CONFIG_INPUT_QPNP_POWER_ON=y
 CONFIG_INPUT_KEYCHORD=y

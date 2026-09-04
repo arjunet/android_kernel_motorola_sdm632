@@ -1,0 +1,11 @@
+config TOUCHSCREEN_CHIPONE_TDDI_MMI
+	bool "ChipOne TDDI touchscreen (ginna, SPI, dual-source w/ Focaltech)"
+	depends on SPI_MASTER
+	default n
+	help
+	  ChipOne TDDI touch controller found on some ginna (Moto E 2020) panel
+	  variants (compatible = "chipone-tddi", panel-supplier "tianma"),
+	  communicating over SPI. Ported from Motorola's out-of-tree
+	  motorola-kernel-modules (android-10-release-qzk,
+	  drivers/input/touchscreen/chipone_tddi_mmi) since it was never carried
+	  into the mainline kernel-msm/LineageOS tree.
