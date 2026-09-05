@@ -12,6 +12,11 @@
 # matches the .bin files shipped on this device.
 
 ccflags-y += -I$(srctree)/$(src)
+# ginna DEBUG: dump every SPI transfer (tx bytes, rx bytes, speed/mode/cs,
+# spi_sync ret) to the kernel log, and poison the rx buffer beforehand so we
+# can tell whether the transfer actually wrote it. Remove this line once the
+# ChipOne probe is understood.
+ccflags-y += -DCTS_DEBUG_SPI_DUMP
 
 obj-$(CONFIG_TOUCHSCREEN_CHIPONE_TDDI_MMI) += chipone_tddi_mmi.o
 

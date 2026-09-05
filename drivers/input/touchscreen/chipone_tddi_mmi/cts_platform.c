@@ -152,10 +152,23 @@ int cts_spi_send_recv(struct cts_platform_data *pdata, size_t len,
 #endif
 	spi_message_init(&msg);
 	spi_message_add_tail(&cmd, &msg);
+#ifdef CTS_DEBUG_SPI_DUMP
+	pr_err("cts-spi: XFER len=%zu speed_hz=%u mode=%u cs=%u bpw=%u\n",
+	       len, cmd.speed_hz, cts_data->spi_client->mode,
+	       cts_data->spi_client->chip_select, cmd.bits_per_word);
+	print_hex_dump(KERN_ERR, "cts-spi: TX  ", DUMP_PREFIX_OFFSET, 16, 1,
+		       tx_buffer, min_t(size_t, len, 32), false);
+	memset(rx_buffer, 0xA5, min_t(size_t, len, 32)); /* poison so we can tell if RX was written */
+#endif
 	ret = spi_sync(cts_data->spi_client, &msg);
 	if (ret) {
 		cts_err("spi sync failed %d", ret);
 	}
+#ifdef CTS_DEBUG_SPI_DUMP
+	pr_err("cts-spi: spi_sync ret=%d\n", ret);
+	print_hex_dump(KERN_ERR, "cts-spi: RX  ", DUMP_PREFIX_OFFSET, 16, 1,
+		       rx_buffer, min_t(size_t, len, 32), false);
+#endif
 #ifdef CFG_CTS_MANUAL_CS
 	cts_plat_set_cs(pdata, 1);
 #endif
