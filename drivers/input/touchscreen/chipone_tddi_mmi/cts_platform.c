@@ -673,6 +673,24 @@ int cts_init_platform_data(struct cts_platform_data *pdata,
 
 #ifndef CONFIG_CTS_I2C_HOST
 	pdata->spi_speed = CFG_CTS_SPI_SPEED_KHZ;
+
+	/* ginna: DMA-safe SPI buffers - each its own kmalloc allocation so it is
+	 * ARCH_DMA_MINALIGN-aligned and shares no cache line with other data,
+	 * required for spi_sync()/DMA correctness on arm64. The stock 32-bit
+	 * build kept these as arrays embedded in this struct. */
+	pdata->spi_tx_buf = kzalloc(ALIGN(CFG_CTS_MAX_SPI_XFER_SIZE + 10, 4),
+				   GFP_KERNEL);
+	pdata->spi_rx_buf = kzalloc(ALIGN(CFG_CTS_MAX_SPI_XFER_SIZE + 10, 4),
+				   GFP_KERNEL);
+	pdata->spi_cache_buf = kzalloc(ALIGN(CFG_CTS_MAX_SPI_XFER_SIZE + 10, 4),
+				      GFP_KERNEL);
+	if (!pdata->spi_tx_buf || !pdata->spi_rx_buf || !pdata->spi_cache_buf) {
+		cts_err("Alloc SPI xfer buffers failed");
+		kfree(pdata->spi_tx_buf);
+		kfree(pdata->spi_rx_buf);
+		kfree(pdata->spi_cache_buf);
+		return -ENOMEM;
+	}
 #endif
 	return 0;
 }
@@ -681,6 +699,12 @@ int cts_deinit_platform_data(struct cts_platform_data *pdata)
 {
 	cts_info("De-Init platform_data");
 	input_unregister_device(pdata->ts_input_dev);
+#ifndef CONFIG_CTS_I2C_HOST
+	kfree(pdata->spi_tx_buf);
+	kfree(pdata->spi_rx_buf);
+	kfree(pdata->spi_cache_buf);
+	pdata->spi_tx_buf = pdata->spi_rx_buf = pdata->spi_cache_buf = NULL;
+#endif
 	return 0;
 }
 

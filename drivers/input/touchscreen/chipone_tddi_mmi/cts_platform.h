@@ -127,9 +127,14 @@ struct cts_platform_data {
 	u8 i2c_fifo_buf[CFG_CTS_MAX_I2C_XFER_SIZE];
 #else
 	struct spi_device *spi_client;
-	u8 spi_cache_buf[ALIGN(CFG_CTS_MAX_SPI_XFER_SIZE + 10, 4)];
-	u8 spi_rx_buf[ALIGN(CFG_CTS_MAX_SPI_XFER_SIZE + 10, 4)];
-	u8 spi_tx_buf[ALIGN(CFG_CTS_MAX_SPI_XFER_SIZE + 10, 4)];
+	/* ginna: separately kmalloc'd (see cts_init_platform_data) rather than
+	 * embedded here. On arm64 these go straight to spi_sync()/DMA, and a
+	 * struct-embedded array shares cache lines with adjacent fields ->
+	 * non-coherent DMA cache maintenance corrupts the transfer. The stock
+	 * 32-bit build never hit this. */
+	u8 *spi_cache_buf;
+	u8 *spi_rx_buf;
+	u8 *spi_tx_buf;
 	u32 spi_speed;
 #endif				/* CONFIG_CTS_I2C_HOST */
 
