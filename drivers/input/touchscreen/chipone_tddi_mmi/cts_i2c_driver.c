@@ -217,6 +217,7 @@ static int cts_deinit_pm_fb_notifier(struct chipone_ts_data *cts_data)
 
 static int check_dt(struct device_node *np)
 {
+#ifdef CFG_CTS_DRM_NOTIFIER
 	int i;
 	int count;
 	struct device_node *node;
@@ -238,6 +239,12 @@ static int check_dt(struct device_node *np)
 	if (node)
 		pr_err("%s: %s not actived\n", __func__, node->name);
 	return -ENODEV;
+#else
+	/* ginna: no "panel" phandle in this device's DT, and this legacy
+	 * MDSS/fbdev kernel has no DRM_PANEL support to look one up with
+	 * anyway - nothing to check. */
+	return 0;
+#endif
 }
 
 #ifdef CONFIG_CTS_I2C_HOST
@@ -392,7 +399,9 @@ static int cts_driver_probe(struct spi_device *client)
     INIT_DELAYED_WORK(&cts_data->fw_upgrade_work, cts_firmware_upgrade_work);
     queue_delayed_work(cts_data->workqueue, &cts_data->fw_upgrade_work, msecs_to_jiffies(15*1000));
 
+#ifdef CFG_CTS_DRM_NOTIFIER
     INIT_WORK(&cts_data->ts_resume_work, cts_resume_work_func);
+#endif
 #if 0
 	ret = cts_start_device(&cts_data->cts_dev);
 	if (ret) {

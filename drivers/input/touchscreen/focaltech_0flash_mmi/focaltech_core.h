@@ -61,7 +61,12 @@
 #include <linux/sched.h>
 #include <linux/kthread.h>
 #include <linux/dma-mapping.h>
-#include <linux/mmi_wake_lock.h>
+/* ginna: motorola-kernel-modules' linux/mmi_wake_lock.h isn't in this tree,
+ * and it's for the newer wakeup_source-registration API anyway - what this
+ * driver's FOCALTECH_SENSOR_EN/FOCALTECH_PALM_SENSOR_EN code paths actually
+ * use (when enabled) is the classic wake_lock/wake_lock_init/WAKE_LOCK_SUSPEND
+ * API, which this kernel already provides natively. */
+#include <linux/wakelock.h>
 #include "focaltech_common.h"
 #if defined(CONFIG_INPUT_TOUCHSCREEN_MMI)
 #include <linux/touchscreen_mmi.h>

@@ -14,4 +14,5 @@ chipone_tddi_mmi-objs += cts_spi_flash.o
 chipone_tddi_mmi-objs += cts_firmware.o
 chipone_tddi_mmi-objs += cts_sysfs.o
 chipone_tddi_mmi-objs += cts_test.o
+chipone_tddi_mmi-objs += cts_tool.o
 chipone_tddi_mmi-objs += cts_charger_detect.o
