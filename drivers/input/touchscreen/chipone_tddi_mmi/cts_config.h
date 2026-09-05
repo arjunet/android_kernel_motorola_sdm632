@@ -4,9 +4,9 @@
 /** Driver version */
 #define CFG_CTS_DRIVER_MAJOR_VERSION        1
 #define CFG_CTS_DRIVER_MINOR_VERSION        2
-#define CFG_CTS_DRIVER_PATCH_VERSION        8
+#define CFG_CTS_DRIVER_PATCH_VERSION        6
 
-#define CFG_CTS_DRIVER_VERSION              "v1.2.8"
+#define CFG_CTS_DRIVER_VERSION              "v1.2.6"
 
 /** Whether reset pin is used */
 #define CFG_CTS_HAS_RESET_PIN
@@ -18,28 +18,23 @@
 #define CFG_CTS_HAS_RESET_PIN
 #endif
 
-/* ginna: NOTE - this value is set into pdata->spi_speed but
- * cts_spi_send_recv() (cts_platform.c) never reads it; the actual transfer
- * clock is the separate `u16 speed` global in cts_sysfs.c. Left at the
- * original 6000 here since changing it is a no-op either way - see
- * cts_sysfs.c for the real knob. */
 #define CFG_CTS_SPI_SPEED_KHZ               6000
 
 #endif
 
 #define CFG_CTS_FORCE_UP
-#define CONFIG_GENERIC_HARDIRQS
+
 //#define CFG_CTS_FW_LOG_REDIRECT
 
 /** Whether force download firmware to chip */
 //#define CFG_CTS_FIRMWARE_FORCE_UPDATE
 
 /** Use build in firmware or firmware file in fs*/
-//#define CFG_CTS_DRIVER_BUILTIN_FIRMWARE
+#define CFG_CTS_DRIVER_BUILTIN_FIRMWARE
 #define CFG_CTS_FIRMWARE_IN_FS
 #ifdef CFG_CTS_FIRMWARE_IN_FS
-//#define CFG_CTS_FW_UPDATE_SYS	// Add FW custom process.
-//#define CFG_CTS_FW_UPDATE_FILE_LOAD	// Load config fw bin as default.
+#define CFG_CTS_FW_UPDATE_SYS	// Add FW custom process.
+#define CFG_CTS_FW_UPDATE_FILE_LOAD	// Load config fw bin as default.
 #ifdef CFG_CTS_FW_UPDATE_FILE_LOAD
 #define CFG_CTS_FW_FILE_NAME_MAX_LEN        128
 #define CFG_CTS_FW_FILE_PATH                "/vendor/firmware/"
@@ -112,7 +107,7 @@
 
 //#define CONFIG_CTS_GLOVE
 
-#define CONFIG_CTS_CHARGER_DETECT
+//#define CONFIG_CTS_CHARGER_DETECT
 
 /* ESD protection */
 //#define CONFIG_CTS_ESD_PROTECTION

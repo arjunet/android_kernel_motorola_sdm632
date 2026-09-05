@@ -10,7 +10,6 @@
  * more flash chips.  This current list focusses on newer chips, which
  * have been converging on command sets which including JEDEC ID.
  */
-#if 0
 static const struct cts_flash cts_flashes[] = {
 	/* Winbond */
 	{"W25Q10EW", 0xEF6011, 256, 0x1000, 0x8000, 0x20000},
@@ -48,7 +47,7 @@ static const struct cts_flash cts_flashes[] = {
 	{"XM25QU20B", 0x205012, 256, 0x1000, 0x8000, 0x40000},
 	{"XM25QU40B", 0x205013, 256, 0x1000, 0x8000, 0x80000},
 };
-#endif
+
 /*
 static const struct cts_flash *find_flash_by_jedec_id(u32 jedec_id)
 {

@@ -147,10 +147,8 @@ int cts_spi_send_recv(struct cts_platform_data *pdata, size_t len,
 
 	//cts_info("spi_speed=%d", speed);
 
-#if 1
-//#ifdef CFG_CTS_MANUAL_CS
-//	cts_plat_set_cs(pdata, 0);
-	cts_data->spi_client->chip_select = 0;
+#ifdef CFG_CTS_MANUAL_CS
+	cts_plat_set_cs(pdata, 0);
 #endif
 	spi_message_init(&msg);
 	spi_message_add_tail(&cmd, &msg);
@@ -531,20 +529,6 @@ static int cts_plat_parse_dt(struct cts_platform_data *pdata,
 	}
 	cts_info("  %-12s: %d", "Y resolution", pdata->res_y);
 
-	if (of_property_read_u32(dev_node, "chipone,def-build-id", &pdata->build_id)) {
-		pdata->build_id = 0;
-		cts_info("chipone,build_id undefined.\n");
-	} else {
-		cts_info("chipone,build_id=0x%04X\n", pdata->build_id);
-	}
-
-	if (of_property_read_u32(dev_node, "chipone,def-config-id", &pdata->config_id)) {
-		pdata->config_id = 0;
-		cts_info("chipone,config_id undefined.\n");
-	} else {
-		cts_info("chipone,config_id=0x%04X\n", pdata->config_id);
-	}
-
 #ifdef CFG_CTS_FW_UPDATE_SYS
 	ret = of_property_read_string(dev_node, CFG_CTS_OF_PANEL_SUPPLIER,
 			&pdata->panel_supplier);
@@ -561,14 +545,11 @@ static int cts_plat_parse_dt(struct cts_platform_data *pdata,
 #endif /* CONFIG_CTS_OF */
 
 #ifdef CFG_CTS_FORCE_UP
-static void cts_plat_touch_event_timeout_work(struct work_struct *work)
+static void cts_plat_touch_event_timeout(unsigned long arg)
 {
-	struct cts_platform_data *pdata = container_of
-		(work, struct cts_platform_data, touch_event_timeout_work.work);
+	cts_warn("Touch event timeout");
 
-	cts_warn("Touch event timeout work");
-
-	cts_plat_release_all_touch(pdata);
+	cts_plat_release_all_touch((struct cts_platform_data *)arg);
 }
 #endif
 
@@ -686,8 +667,8 @@ int cts_init_platform_data(struct cts_platform_data *pdata,
 #endif /* CFG_CTS_GESTURE */
 
 #ifdef CFG_CTS_FORCE_UP
-    INIT_DELAYED_WORK(&pdata->touch_event_timeout_work,
-        cts_plat_touch_event_timeout_work);
+	setup_timer(&pdata->touch_event_timeout_timer,
+		    cts_plat_touch_event_timeout, (unsigned long)pdata);
 #endif
 
 #ifndef CONFIG_CTS_I2C_HOST
@@ -1016,20 +997,10 @@ int cts_plat_process_touch_msg(struct cts_platform_data *pdata,
 	input_sync(input_dev);
 #ifdef CFG_CTS_FORCE_UP
 	if (contact) {
-        struct chipone_ts_data *cts_data;
-        cts_data = container_of(pdata->cts_dev, struct chipone_ts_data, cts_dev);
-
-        if (delayed_work_pending(&pdata->touch_event_timeout_work)) {
-            mod_delayed_work(cts_data->workqueue,
-                &pdata->touch_event_timeout_work,
-                msecs_to_jiffies(100));
-        } else {
-            queue_delayed_work(cts_data->workqueue,
-                &pdata->touch_event_timeout_work,
-                msecs_to_jiffies(100));
-        }
+		mod_timer(&pdata->touch_event_timeout_timer,
+			  jiffies + msecs_to_jiffies(100));
 	} else {
-		cancel_delayed_work_sync(&pdata->touch_event_timeout_work);
+		del_timer(&pdata->touch_event_timeout_timer);
 	}
 #endif
 	return 0;
@@ -1056,7 +1027,9 @@ int cts_plat_release_all_touch(struct cts_platform_data *pdata)
 	input_mt_sync(input_dev);
 #endif /* CONFIG_CTS_SLOTPROTOCOL */
 	input_sync(input_dev);
-
+#ifdef CFG_CTS_FORCE_UP
+	del_timer(&pdata->touch_event_timeout_timer);
+#endif
 	return 0;
 }
 

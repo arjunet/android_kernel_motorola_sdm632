@@ -43,6 +43,10 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spidev.h>
 
+#ifdef CFG_CTS_DRM_NOTIFIER
+#include <linux/msm_drm_notify.h>
+#endif
+
 #include "cts_config.h"
 #include "cts_core.h"
 
@@ -87,8 +91,6 @@ struct cts_platform_data {
 #ifdef CFG_CTS_FW_UPDATE_SYS
 	const char *panel_supplier;
 #endif
-	u32 build_id;
-	u32 config_id;
 
 	struct cts_device *cts_dev;
 
@@ -113,7 +115,7 @@ struct cts_platform_data {
 #endif				/* CONFIG_CTS_PM_FB_NOTIFIER */
 
 #ifdef CFG_CTS_FORCE_UP
-    struct delayed_work touch_event_timeout_work;
+	struct timer_list touch_event_timeout_timer;
 #endif
 
 #ifdef CFG_CTS_FW_LOG_REDIRECT

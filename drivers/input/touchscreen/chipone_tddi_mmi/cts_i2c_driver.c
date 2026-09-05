@@ -4,14 +4,8 @@
 #include "cts_platform.h"
 #include "cts_core.h"
 #include "cts_sysfs.h"
-#include "cts_charger_detect.h"
 
-#ifdef CFG_CTS_DRM_NOTIFIER
-#include <drm/drm_panel.h>
-static struct drm_panel *active_panel;
-static int check_dt(struct device_node *np);
-static void cts_resume_work_func(struct work_struct *work);
-#endif
+
 bool cts_show_debug_log = false;
 
 module_param_named(debug_log, cts_show_debug_log, bool, 0660);
@@ -101,45 +95,35 @@ static int cts_resume(struct chipone_ts_data *cts_data)
 
 #ifdef CONFIG_CTS_PM_FB_NOTIFIER
 #ifdef CFG_CTS_DRM_NOTIFIER
-static void cts_resume_work_func(struct work_struct *work)
-{
-	struct chipone_ts_data *cts_data =
-		container_of(work, struct chipone_ts_data, ts_resume_work);
-	cts_info("%s", __func__);
-	cts_resume(cts_data);
-}
 static int fb_notifier_callback(struct notifier_block *nb,
 				unsigned long action, void *data)
 {
-    volatile int blank;
-    const struct cts_platform_data *pdata =
-        container_of(nb, struct cts_platform_data, fb_notifier);
-    struct chipone_ts_data *cts_data =
-        container_of(pdata->cts_dev, struct chipone_ts_data, cts_dev);
-    struct drm_panel_notifier *evdata = data;
+	volatile int blank;
+	const struct cts_platform_data *pdata =
+	    container_of(nb, struct cts_platform_data, fb_notifier);
+	struct chipone_ts_data *cts_data =
+	    container_of(pdata->cts_dev, struct chipone_ts_data, cts_dev);
+	struct fb_event *evdata = data;
 
-    cts_info("FB notifier callback");
-    if (!evdata || !cts_data)
-        return 0;
+	cts_info("FB notifier callback");
 
-    blank = *(int *)evdata->data;
-    cts_info("action=%lu, blank=%d\n", action, blank);
+	if (evdata && evdata->data) {
+		if (action == MSM_DRM_EVENT_BLANK) {
+			blank = *(int *)evdata->data;
+			if (blank == MSM_DRM_BLANK_UNBLANK) {
+				cts_resume(cts_data);
+				return NOTIFY_OK;
+			}
+		} else if (action == MSM_DRM_EARLY_EVENT_BLANK) {
+			blank = *(int *)evdata->data;
+			if (blank == MSM_DRM_BLANK_POWERDOWN) {
+				cts_suspend(cts_data);
+				return NOTIFY_OK;
+			}
+		}
+	}
 
-    if (action == DRM_PANEL_EARLY_EVENT_BLANK) {
-        if (blank == DRM_PANEL_BLANK_POWERDOWN) {
-            cts_suspend(cts_data);
-        }
-    } else if (evdata->data) {
-        blank = *(int *)evdata->data;
-        if (action == DRM_PANEL_EVENT_BLANK) {
-            if (blank == DRM_PANEL_BLANK_UNBLANK) {
-//              cts_resume(cts_data);
-                queue_work(cts_data->workqueue, &cts_data->ts_resume_work);
-            }
-        }
-    }
-
-    return 0;
+	return NOTIFY_DONE;
 }
 #else
 static int fb_notifier_callback(struct notifier_block *nb,
@@ -181,16 +165,7 @@ static int cts_init_pm_fb_notifier(struct chipone_ts_data *cts_data)
 	cts_data->pdata->fb_notifier.notifier_call = fb_notifier_callback;
 
 #ifdef CFG_CTS_DRM_NOTIFIER
-{
-    int ret = -ENODEV;
-    if (active_panel) {
-        ret = drm_panel_notifier_register(active_panel, &cts_data->pdata->fb_notifier);
-        if(ret) {
-            cts_err("register drm_notifier failed. ret=%d\n", ret);
-        }
-    }
-    return ret;
-}
+	return msm_drm_register_client(&cts_data->pdata->fb_notifier);
 #else
 	return fb_register_client(&cts_data->pdata->fb_notifier);
 #endif
@@ -200,52 +175,12 @@ static int cts_deinit_pm_fb_notifier(struct chipone_ts_data *cts_data)
 {
 	cts_info("Deinit FB notifier");
 #ifdef CFG_CTS_DRM_NOTIFIER
-{
-    int ret = 0;
-    if (active_panel) {
-        ret = drm_panel_notifier_unregister(active_panel, &cts_data->pdata->fb_notifier);
-        if (ret)
-            cts_err("Error occurred while unregistering drm_notifier.\n");
-    }
-    return ret;
-}
+	return msm_drm_unregister_client(&cts_data->pdata->fb_notifier)
 #else
 	return fb_unregister_client(&cts_data->pdata->fb_notifier);
 #endif
 }
 #endif /* CONFIG_CTS_PM_FB_NOTIFIER */
-
-static int check_dt(struct device_node *np)
-{
-#ifdef CFG_CTS_DRM_NOTIFIER
-	int i;
-	int count;
-	struct device_node *node;
-	struct drm_panel *panel;
-
-	count = of_count_phandle_with_args(np, "panel", NULL);
-	if (count <= 0)
-		return 0;
-
-	for (i = 0; i < count; i++) {
-		node = of_parse_phandle(np, "panel", i);
-		panel = of_drm_find_panel(node);
-		of_node_put(node);
-		if (!IS_ERR(panel)) {
-			active_panel = panel;
-			return 0;
-		}
-	}
-	if (node)
-		pr_err("%s: %s not actived\n", __func__, node->name);
-	return -ENODEV;
-#else
-	/* ginna: no "panel" phandle in this device's DT, and this legacy
-	 * MDSS/fbdev kernel has no DRM_PANEL support to look one up with
-	 * anyway - nothing to check. */
-	return 0;
-#endif
-}
 
 #ifdef CONFIG_CTS_I2C_HOST
 static int cts_driver_probe(struct i2c_client *client,
@@ -256,14 +191,7 @@ static int cts_driver_probe(struct spi_device *client)
 {
 	struct chipone_ts_data *cts_data = NULL;
 	int ret = 0;
-
-{
-	struct device_node *dp = client->dev.of_node;
-	if (check_dt(dp)) {
-		cts_err("%s: %s not actived\n", __func__, dp->name);
-		return -ENODEV;
-	}
-}
+	pr_err("wj---probe");
 #ifdef CONFIG_CTS_I2C_HOST
 	cts_info("Probe i2c client: name='%s' addr=0x%02x flags=0x%02x irq=%d",
 		 client->name, client->addr, client->flags, client->irq);
@@ -288,6 +216,7 @@ static int cts_driver_probe(struct spi_device *client)
 		cts_err("Allocate chipone_ts_data failed");
 		return -ENOMEM;
 	}
+
 	cts_data->pdata =
 	    (struct cts_platform_data *)
 	    kzalloc(sizeof(struct cts_platform_data), GFP_KERNEL);
@@ -299,11 +228,9 @@ static int cts_driver_probe(struct spi_device *client)
 #ifdef CONFIG_CTS_I2C_HOST
 	i2c_set_clientdata(client, cts_data);
 	cts_data->i2c_client = client;
-    cts_data->device = &client->dev;
 #else
 	spi_set_drvdata(client, cts_data);
 	cts_data->spi_client = client;
-    cts_data->device = &client->dev;
 #endif
 
 	cts_init_platform_data(cts_data->pdata, client);
@@ -389,30 +316,16 @@ static int cts_driver_probe(struct spi_device *client)
 		goto err_register_fb;
 	}
 
-    ret = cts_charger_detect_init(cts_data);
-    if (ret) {
-        cts_err("Init charger detect failed %d", ret);
-		// Ignore this error
-    }
-
-    /* Init firmware upgrade work and schedule */
-    INIT_DELAYED_WORK(&cts_data->fw_upgrade_work, cts_firmware_upgrade_work);
-    queue_delayed_work(cts_data->workqueue, &cts_data->fw_upgrade_work, msecs_to_jiffies(15*1000));
-
-#ifdef CFG_CTS_DRM_NOTIFIER
-    INIT_WORK(&cts_data->ts_resume_work, cts_resume_work_func);
-#endif
-#if 0
 	ret = cts_start_device(&cts_data->cts_dev);
 	if (ret) {
 		cts_err("Start device failed %d", ret);
 		goto err_free_irq;
 	}
-#endif
+
 	return 0;
 
-//err_free_irq:
-//	cts_plat_free_irq(cts_data->pdata);
+err_free_irq:
+	cts_plat_free_irq(cts_data->pdata);
 
 err_register_fb:
 #ifdef CONFIG_CTS_PM_FB_NOTIFIER
@@ -481,8 +394,6 @@ static int cts_driver_remove(struct spi_device *client)
 		if (ret) {
 			cts_warn("Stop device failed %d", ret);
 		}
-
-        cts_charger_detect_deinit(cts_data);
 
 		cts_plat_free_irq(cts_data->pdata);
 
@@ -575,11 +486,7 @@ static ssize_t reset_pin_show(struct device_driver *driver, char *buf)
 	    );
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(reset_pin, S_IRUGO, reset_pin_show, NULL);
-#else
-static DRIVER_ATTR_RO(reset_pin);
-#endif
 
 static ssize_t swap_xy_show(struct device_driver *dev, char *buf)
 {
@@ -592,11 +499,7 @@ static ssize_t swap_xy_show(struct device_driver *dev, char *buf)
 	    );
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(swap_xy, S_IRUGO, swap_xy_show, NULL);
-#else
-static DRIVER_ATTR_RO(swap_xy);
-#endif
 
 static ssize_t wrap_x_show(struct device_driver *dev, char *buf)
 {
@@ -609,11 +512,7 @@ static ssize_t wrap_x_show(struct device_driver *dev, char *buf)
 	    );
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(wrap_x, S_IRUGO, wrap_x_show, NULL);
-#else
-static DRIVER_ATTR_RO(wrap_x);
-#endif
 
 static ssize_t wrap_y_show(struct device_driver *dev, char *buf)
 {
@@ -626,11 +525,7 @@ static ssize_t wrap_y_show(struct device_driver *dev, char *buf)
 	    );
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(wrap_y, S_IRUGO, wrap_y_show, NULL);
-#else
-static DRIVER_ATTR_RO(wrap_y);
-#endif
 
 static ssize_t force_update_show(struct device_driver *dev, char *buf)
 {
@@ -643,11 +538,7 @@ static ssize_t force_update_show(struct device_driver *dev, char *buf)
 	    );
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(force_update, S_IRUGO, force_update_show, NULL);
-#else
-static DRIVER_ATTR_RO(force_update);
-#endif
 
 static ssize_t max_touch_num_show(struct device_driver *dev, char *buf)
 {
@@ -655,11 +546,7 @@ static ssize_t max_touch_num_show(struct device_driver *dev, char *buf)
 		       CFG_CTS_MAX_TOUCH_NUM);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(max_touch_num, S_IRUGO, max_touch_num_show, NULL);
-#else
-static DRIVER_ATTR_RO(max_touch_num);
-#endif
 
 static ssize_t vkey_show(struct device_driver *dev, char *buf)
 {
@@ -672,11 +559,7 @@ static ssize_t vkey_show(struct device_driver *dev, char *buf)
 	    );
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(vkey, S_IRUGO, vkey_show, NULL);
-#else
-static DRIVER_ATTR_RO(vkey);
-#endif
 
 static ssize_t gesture_show(struct device_driver *dev, char *buf)
 {
@@ -689,11 +572,7 @@ static ssize_t gesture_show(struct device_driver *dev, char *buf)
 	    );
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(gesture, S_IRUGO, gesture_show, NULL);
-#else
-static DRIVER_ATTR_RO(gesture);
-#endif
 
 static ssize_t esd_protection_show(struct device_driver *dev, char *buf)
 {
@@ -706,11 +585,7 @@ static ssize_t esd_protection_show(struct device_driver *dev, char *buf)
 	    );
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(esd_protection, S_IRUGO, esd_protection_show, NULL);
-#else
-static DRIVER_ATTR_RO(esd_protection);
-#endif
 
 static ssize_t slot_protocol_show(struct device_driver *dev, char *buf)
 {
@@ -723,11 +598,7 @@ static ssize_t slot_protocol_show(struct device_driver *dev, char *buf)
 	    );
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(slot_protocol, S_IRUGO, slot_protocol_show, NULL);
-#else
-static DRIVER_ATTR_RO(slot_protocol);
-#endif
 
 static ssize_t max_xfer_size_show(struct device_driver *dev, char *buf)
 {
@@ -740,22 +611,14 @@ static ssize_t max_xfer_size_show(struct device_driver *dev, char *buf)
 #endif
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(max_xfer_size, S_IRUGO, max_xfer_size_show, NULL);
-#else
-static DRIVER_ATTR_RO(max_xfer_size);
-#endif
 
 static ssize_t driver_info_show(struct device_driver *dev, char *buf)
 {
 	return snprintf(buf, PAGE_SIZE, "Driver version: %s\n", CFG_CTS_DRIVER_VERSION);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static DRIVER_ATTR(driver_info, S_IRUGO, driver_info_show, NULL);
-#else
-static DRIVER_ATTR_RO(driver_info);
-#endif
 
 static struct attribute *cts_i2c_driver_config_attrs[] = {
 	&driver_attr_reset_pin.attr,
@@ -856,8 +719,7 @@ static void __exit cts_driver_exit(void)
 #endif
 }
 
-//module_init(cts_driver_init);
-late_initcall(cts_driver_init);
+module_init(cts_driver_init);
 module_exit(cts_driver_exit);
 
 MODULE_DESCRIPTION("Chipone TDDI touchscreen Driver for QualComm platform");

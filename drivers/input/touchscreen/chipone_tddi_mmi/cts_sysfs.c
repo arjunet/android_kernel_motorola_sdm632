@@ -24,21 +24,15 @@
 #define HW_STUB_ADDR                (0XF000)
 
 static char cmdline_param[MAX_ARG_LENGTH + 1];
-int argc;
-char *argv[MAX_ARG_NUM];
+static int argc;
+static char *argv[MAX_ARG_NUM];
 
 static int jitter_test_frame = 10;
 static s16 *manualdiff_base;
 
-/* ginna: this is the SPI transfer clock actually used by cts_spi_send_recv()
- * (cts_platform.c uses this global, not pdata->spi_speed / CFG_CTS_SPI_SPEED_KHZ
- * from cts_config.h - that field is set but never read for .speed_hz). A prior
- * attempt to lower the clock via CFG_CTS_SPI_SPEED_KHZ had no effect at all for
- * exactly this reason - confirmed by identical CRC-error bytes at "6MHz" and
- * "1MHz". This is the one that actually reaches the SPI controller. */
-u16 speed = 1000;
+u16 speed = 9600;
 
-int parse_arg(const char *buf, size_t count)
+static int parse_arg(const char *buf, size_t count)
 {
 	char *p;
 
@@ -2059,7 +2053,7 @@ static ssize_t jitter_store(struct device *dev,
 
 	ret = kstrtou16(argv[0], 0, &cnt);
 	if (ret == 0) {
-		if (cnt < 2 || cnt > 10000) {
+		if (cnt > 2 || cnt < 10000) {
 			jitter_test_frame = cnt;
 		}
 	}
@@ -2216,79 +2210,88 @@ err_jitter_show_exit:
 static DEVICE_ATTR(jitter, S_IRUSR | S_IWUSR, jitter_show, jitter_store);
 
 static ssize_t compensate_cap_show(struct device *dev,
-        struct device_attribute *attr, char *buf)
+				   struct device_attribute *attr, char *buf)
 {
-    struct chipone_ts_data *cts_data = dev_get_drvdata(dev);
-    struct cts_device *cts_dev = &cts_data->cts_dev;
-    u8 *cap = NULL;
-    int ret;
-    ssize_t count = 0;
-    int r, c, min, max, max_r, max_c, min_r, min_c, sum, average;
+	struct chipone_ts_data *cts_data = dev_get_drvdata(dev);
+	struct cts_device *cts_dev = &cts_data->cts_dev;
+	u8 *cap = NULL;
+	int ret;
+	ssize_t count = 0;
+	bool data_valid = false;
+	u8 r, c;
 
-    cts_info("Read '%s'", attr->attr.name);
+	cts_info("compensate_cap_show");
 
-    cap = kzalloc(cts_dev->hwdata->num_row * cts_dev->hwdata->num_col,
-        GFP_KERNEL);
-    if (cap == NULL) {
-        return scnprintf(buf, PAGE_SIZE,
-            "Allocate mem for compensate cap failed\n");
-    }
+	cts_lock_device(cts_dev);
+	ret = cts_enable_get_compensate_cap(cts_dev);
+	if (ret) {
+		count =
+		    snprintf(buf, PAGE_SIZE,
+			     "Enable get compensate cap failed %d\n", ret);
+		goto unlock_device;
+	}
 
-    cts_lock_device(cts_dev);
-    ret = cts_get_compensate_cap(cts_dev, cap);
-    cts_unlock_device(cts_dev);
-    if (ret) {
-        kfree(cap);
-        return scnprintf(buf, PAGE_SIZE,
-            "Get compensate cap failed %d\n", ret);
-    }
+	cap =
+	    kzalloc(cts_dev->hwdata->num_row * cts_dev->hwdata->num_col,
+		    GFP_KERNEL);
+	if (cap == NULL) {
+		count =
+		    snprintf(buf, PAGE_SIZE, "Allocate mem for cap failed\n");
+		goto unlock_device;
+	}
 
-    max = min = cap[0];
-    sum = 0;
-    max_r = max_c = min_r = min_c = 0;
-    for (r = 0; r < cts_dev->hwdata->num_row; r++) {
-        for (c = 0; c < cts_dev->hwdata->num_col; c++) {
-            u16 val = cap[r * cts_dev->hwdata->num_col + c];
-            sum += val;
-            if (val > max) {
-                max = val;
-                max_r = r;
-                max_c = c;
-            } else if (val < min) {
-                min = val;
-                min_r = r;
-                min_c = c;
-            }
-        }
-    }
-    average = sum / (cts_dev->hwdata->num_row * cts_dev->hwdata->num_col);
+	ret = cts_get_compensate_cap(cts_dev, cap);
+	if (ret) {
+		count =
+		    snprintf(buf, PAGE_SIZE, "Get compensate cap failed %d\n",
+			     ret);
+		goto unlock_device;
+	}
 
-    count += scnprintf(buf + count, PAGE_SIZE - count,
-        "----------------------------------------------------------------------------\n"
-        " Compensatete Cap MIN: [%d][%d]=%u, MAX: [%d][%d]=%u, AVG=%u\n"
-        "---+------------------------------------------------------------------------\n"
-        "   |", min_r, min_c, min, max_r, max_c, max, average);
-    for (c = 0; c < cts_dev->hwdata->num_col; c++) {
-        count += scnprintf(buf + count, PAGE_SIZE - count, " %3u", c);
-    }
-    count += scnprintf(buf + count, PAGE_SIZE - count,
-        "\n"
-        "---+------------------------------------------------------------------------\n");
+	ret = cts_disable_get_compensate_cap(cts_dev);
+	if (ret) {
+		count =
+		    snprintf(buf, PAGE_SIZE,
+			     "Disable get compensate cap failed %d\n", ret);
+		goto unlock_device;
+	}
 
-    for (r = 0; r < cts_dev->hwdata->num_row; r++) {
-        count += scnprintf(buf + count, PAGE_SIZE - count, "%2u |", r);
-        for (c = 0; c < cts_dev->hwdata->num_col; c++) {
-            count += scnprintf(buf + count, PAGE_SIZE - count,
-                " %3u", cap[r * cts_dev->hwdata->num_col + c]);
-       }
-       buf[count++] = '\n';
-    }
-    count += scnprintf(buf + count, PAGE_SIZE - count,
-        "---+------------------------------------------------------------------------\n");
+	data_valid = true;
+unlock_device:
+	cts_unlock_device(cts_dev);
 
-    kfree(cap);
+	if (data_valid) {
+		count +=
+		    snprintf(buf + count, PAGE_SIZE - count,
+			     SPLIT_LINE_STR "      ");
 
-    return count;
+		for (c = 0; c < cts_dev->fwdata.cols; c++) {
+			count +=
+			    snprintf(buf + count, PAGE_SIZE - count,
+				     COL_NUM_FORMAT_STR, c);
+		}
+		count +=
+		    snprintf(buf + count, PAGE_SIZE - count,
+			     "\n" SPLIT_LINE_STR);
+
+		for (r = 0; r < cts_dev->fwdata.rows; r++) {
+			count +=
+			    snprintf(buf + count, PAGE_SIZE - count,
+				     ROW_NUM_FORMAT_STR, r);
+			for (c = 0; c < cts_dev->fwdata.cols; c++) {
+				count +=
+				    snprintf(buf + count, PAGE_SIZE - count,
+					     DATA_FORMAT_STR,
+					     cap[r * cts_dev->fwdata.cols + c]);
+			}
+			buf[count++] = '\n';
+		}
+	}
+
+	if (cap) {
+		kfree(cap);
+	}
+	return count;
 }
 
 static DEVICE_ATTR(compensate_cap, S_IRUGO, compensate_cap_show, NULL);
@@ -2567,22 +2570,9 @@ static ssize_t vendor_show(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "chipone");
 }
 
-/* Attribute: vendor (RO) */
-static ssize_t ic_ver_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct chipone_ts_data *ts = dev_get_drvdata(dev);
-
-	return scnprintf(buf, PAGE_SIZE, "%s%s\n%s%04x\n%s%04x\n",
-			"Product ID: ", ts->cts_dev.hwdata->name,
-			"Build ID: ", ts->cts_dev.fwdata.version ? ts->cts_dev.fwdata.version : ts->pdata->build_id,
-			"Config ID: ", ts->cts_dev.fwdata.ddi_version ? ts->cts_dev.fwdata.ddi_version : ts->pdata->config_id);
-}
-
 static struct device_attribute touchscreen_attributes[] = {
 	__ATTR_RO(path),
 	__ATTR_RO(vendor),
-	__ATTR_RO(ic_ver),
 	__ATTR_NULL
 };
 
@@ -2638,12 +2628,12 @@ static int cts_fw_class_init(void *_data, bool create)
 		if(NULL != data->cts_dev.hwdata->name) {
 			ts_class_dev = device_create(touchscreen_class, NULL,
 					     MKDEV(INPUT_MAJOR, minor),
-					     data, "%s", data->cts_dev.hwdata->name);
+					     data, data->cts_dev.hwdata->name);
 			cts_info("Create device for IC: %s", data->cts_dev.hwdata->name);
 		} else {
 			ts_class_dev = device_create(touchscreen_class, NULL,
 					     MKDEV(INPUT_MAJOR, minor),
-					     data, "%s", CFG_CTS_CHIP_NAME);
+					     data, CFG_CTS_CHIP_NAME);
 			cts_info("Create device '" CFG_CTS_CHIP_NAME "'");
 		}
 		if (IS_ERR(ts_class_dev)) {

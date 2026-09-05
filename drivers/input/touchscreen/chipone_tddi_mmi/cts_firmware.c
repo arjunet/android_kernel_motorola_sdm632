@@ -380,8 +380,7 @@ static const struct cts_firmware *cts_request_newer_driver_builtin_firmware(u32
 	firmware = cts_driver_builtin_firmwares;
 	for (i = 0; i < ARRAY_SIZE(cts_driver_builtin_firmwares);
 	     i++, firmware++) {
-//        if (MATCH_HWID(firmware, hwid) && MATCH_FWID(firmware, fwid)) {
-        if (1) {
+		if (MATCH_HWID(firmware, hwid) && MATCH_FWID(firmware, fwid)) {
 			if (!is_firmware_valid(firmware)) {
 				cts_err("Found driver builtin '%s' "
 					"hwid: %06x fwid: %04x data: %p size: %zu INVALID",
@@ -396,8 +395,7 @@ static const struct cts_firmware *cts_request_newer_driver_builtin_firmware(u32
 				 firmware->name, firmware->hwid, firmware->fwid,
 				 firmware->size, FIRMWARE_VERSION(firmware));
 
-//            if(FIRMWARE_VERSION(firmware) > device_fw_ver) {
-            if(1) {
+			if (FIRMWARE_VERSION(firmware) > device_fw_ver) {
 				cts_info("Found newer driver builtin '%s' "
 					 "hwid: %06x fwid: %04x size: %zu ver: %04x > %04x",
 					 firmware->name, firmware->hwid,
@@ -699,11 +697,9 @@ const struct cts_firmware *cts_request_firmware(const struct cts_device
 									cts_dev->
 									config_fw_name
 									:
-//									CFG_CTS_FIRMWARE_FILEPATH,
-									CFG_CTS_FIRMWARE_FILENAME,
+									CFG_CTS_FIRMWARE_FILEPATH,
 #else /* CFG_CTS_FW_UPDATE_FILE_LOAD */
-//									CFG_CTS_FIRMWARE_FILEPATH,
-									CFG_CTS_FIRMWARE_FILENAME,
+									CFG_CTS_FIRMWARE_FILEPATH,
 #endif /* CFG_CTS_FW_UPDATE_FILE_LOAD */
 									firmware_builtin
 									?
@@ -976,7 +972,8 @@ int cts_update_firmware(struct cts_device *cts_dev,
 				ret);
 		}
 #ifdef CFG_CTS_UPDATE_CRCCHECK
-		if (cts_dev->hwdata->hwid == CTS_DEV_HWID_ICNL9911S) {
+		if (cts_dev->hwdata->hwid == CTS_DEV_HWID_ICNL9911S ||
+		    cts_dev->hwdata->hwid == CTS_DEV_HWID_ICNL9911C) {
 			cts_sram_writesb_boot_crc_retry(cts_dev,
 							firmware_info.
 							firmware_sect_size,
@@ -1070,12 +1067,9 @@ out:
 	}
 
 #ifdef CONFIG_CTS_CHARGER_DETECT
-    if (cts_is_charger_exist(cts_dev)) {
-        int r = cts_set_dev_charger_attached(cts_dev, true);
-        if (r) {
-            cts_err("Set dev charger attached failed %d", r);
-        }
-    }
+	if (cts_is_charger_exist(cts_dev)) {
+		cts_charger_plugin(cts_dev);
+	}
 #endif /* CONFIG_CTS_CHARGER_DETECT */
 
 #ifdef CONFIG_CTS_GLOVE

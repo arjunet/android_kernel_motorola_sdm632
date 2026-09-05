@@ -39,7 +39,6 @@ obj-$(CONFIG_TOUCHSCREEN_ELO)		+= elo.o
 obj-$(CONFIG_TOUCHSCREEN_EGALAX)	+= egalax_ts.o
 obj-$(CONFIG_TOUCHSCREEN_FOCALTECH_MMI) += focaltech_mmi/
 obj-$(CONFIG_TOUCHSCREEN_CHIPONE_TDDI_MMI) += chipone_tddi_mmi/
-obj-$(CONFIG_TOUCHSCREEN_FOCALTECH_0FLASH_MMI) += focaltech_0flash_mmi/
 obj-$(CONFIG_TOUCHSCREEN_EGALAX_SERIAL)	+= egalax_ts_serial.o
 obj-$(CONFIG_TOUCHSCREEN_FT5X06)	+= ft5x06_ts.o
 obj-$(CONFIG_TOUCHSCREEN_FUJITSU)	+= fujitsu_ts.o
