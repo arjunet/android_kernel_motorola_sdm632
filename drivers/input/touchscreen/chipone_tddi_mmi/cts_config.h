@@ -18,7 +18,13 @@
 #define CFG_CTS_HAS_RESET_PIN
 #endif
 
-#define CFG_CTS_SPI_SPEED_KHZ               6000
+/* ginna: 6MHz (Motorola's original board's validated speed) gives
+ * "SPI RX CRC error" + "Enter program mode failed -14" on this board's
+ * trace/cable layout - the SRAM-BOOT readback itself succeeds, so basic
+ * comms work, but higher-throughput/handshake transfers don't survive.
+ * Try a much more conservative speed first for reliability; can be tuned
+ * back up once touch is confirmed working at all. */
+#define CFG_CTS_SPI_SPEED_KHZ               1000
 
 #endif
 
