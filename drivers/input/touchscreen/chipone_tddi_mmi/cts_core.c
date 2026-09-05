@@ -1938,6 +1938,13 @@ int cts_enter_program_mode(struct cts_device *cts_dev)
 #else
 	cts_set_program_addr(cts_dev);
 	cts_plat_reset_device(cts_dev->pdata);
+	/* ginna: cts_plat_reset_device() is marked "can not be modified", so add
+	 * settle time here instead - a fixed, byte-identical magic-write failure
+	 * ("Enter program mode failed -14") at two different confirmed-different
+	 * SPI clock speeds rules out signal integrity; an untested guess left is
+	 * that this chip's boot ROM needs more than the existing 40ms after reset
+	 * release before it's actually listening for the unlock sequence. */
+	mdelay(60);
 	ret = cts_plat_spi_write(cts_dev->pdata, 0xcc, &magic_num[1], 3, 5, 10);
 	if (ret) {
 		cts_err("Write magic number to i2c_dev: 0x%02x failed %d",
