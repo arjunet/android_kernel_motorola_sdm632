@@ -18,13 +18,12 @@
 #define CFG_CTS_HAS_RESET_PIN
 #endif
 
-/* ginna: 6MHz (Motorola's original board's validated speed) gives
- * "SPI RX CRC error" + "Enter program mode failed -14" on this board's
- * trace/cable layout - the SRAM-BOOT readback itself succeeds, so basic
- * comms work, but higher-throughput/handshake transfers don't survive.
- * Try a much more conservative speed first for reliability; can be tuned
- * back up once touch is confirmed working at all. */
-#define CFG_CTS_SPI_SPEED_KHZ               1000
+/* ginna: NOTE - this value is set into pdata->spi_speed but
+ * cts_spi_send_recv() (cts_platform.c) never reads it; the actual transfer
+ * clock is the separate `u16 speed` global in cts_sysfs.c. Left at the
+ * original 6000 here since changing it is a no-op either way - see
+ * cts_sysfs.c for the real knob. */
+#define CFG_CTS_SPI_SPEED_KHZ               6000
 
 #endif
 

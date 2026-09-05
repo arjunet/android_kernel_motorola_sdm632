@@ -30,7 +30,13 @@ char *argv[MAX_ARG_NUM];
 static int jitter_test_frame = 10;
 static s16 *manualdiff_base;
 
-u16 speed = 6000;
+/* ginna: this is the SPI transfer clock actually used by cts_spi_send_recv()
+ * (cts_platform.c uses this global, not pdata->spi_speed / CFG_CTS_SPI_SPEED_KHZ
+ * from cts_config.h - that field is set but never read for .speed_hz). A prior
+ * attempt to lower the clock via CFG_CTS_SPI_SPEED_KHZ had no effect at all for
+ * exactly this reason - confirmed by identical CRC-error bytes at "6MHz" and
+ * "1MHz". This is the one that actually reaches the SPI controller. */
+u16 speed = 1000;
 
 int parse_arg(const char *buf, size_t count)
 {
