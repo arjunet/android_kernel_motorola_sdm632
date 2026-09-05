@@ -5,6 +5,14 @@
 #include "cts_core.h"
 #include "cts_firmware.h"
 #include "cts_sysfs.h"
+#include <linux/moduleparam.h>
+
+/* ginna debug: force SPI mode (0..3) at probe via spi_setup(); <0 = DT default.
+ * Live-tunable: /sys/module/chipone_tddi_mmi/parameters/cts_force_spi_mode
+ * then unbind/bind spi7.0 to re-probe. */
+int cts_force_spi_mode = 3;
+module_param(cts_force_spi_mode, int, 0644);
+MODULE_PARM_DESC(cts_force_spi_mode, "force SPI mode 0..3 at probe, <0=DT default");
 
 #ifdef CFG_CTS_FW_LOG_REDIRECT
 size_t cts_plat_get_max_fw_log_size(struct cts_platform_data *pdata)
@@ -602,6 +610,24 @@ int cts_init_platform_data(struct cts_platform_data *pdata,
 #else
 	pdata->spi_client = spi;
 	pdata->spi_client->irq = pdata->irq;
+	/* ginna: the driver never configures SPI mode and the DT sets no
+	 * spi-cpol/spi-cpha, so it defaults to mode 0. On this arm64 /
+	 * LineageOS-4.9 QUP driver that yields a constant-byte MISO readback
+	 * (wrong clock phase) while TX is fine and spi_sync returns 0.
+	 * cts_force_spi_mode is a live-tunable module param
+	 * (/sys/module/chipone_tddi_mmi/parameters/cts_force_spi_mode, 0644):
+	 *   0..3 = force that SPI mode via spi_setup(); <0 = leave DT default.
+	 * Sweep it with unbind/bind, no reflash. */
+	if (cts_force_spi_mode >= 0 && cts_force_spi_mode <= 3) {
+		int _r;
+		pdata->spi_client->mode =
+			(pdata->spi_client->mode & ~SPI_MODE_3) |
+			(cts_force_spi_mode & SPI_MODE_3);
+		pdata->spi_client->bits_per_word = 8;
+		_r = spi_setup(pdata->spi_client);
+		cts_info("Force SPI mode %d: spi_setup ret=%d mode=0x%x",
+			 cts_force_spi_mode, _r, pdata->spi_client->mode);
+	}
 #endif /* CONFIG_CTS_I2C_HOST */
 	rt_mutex_init(&pdata->dev_lock);
 	spin_lock_init(&pdata->irq_lock);
