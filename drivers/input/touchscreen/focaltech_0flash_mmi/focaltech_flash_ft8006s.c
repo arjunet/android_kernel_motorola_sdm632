@@ -41,13 +41,7 @@
 #define FTS_READ_BOOT_ID_TIMEOUT                    3
 #define FTS_FLASH_PACKET_LENGTH_SPI                 (32 * 1024 - 16)
 #define FTS_FLASH_DELAY_INIT                        12
-/* ginna: was 0 - fts_fw_write_start then only wrote the pram *app* and skipped
- * fts_dram_write_ecc(), so the FT8006S_AA came up running firmware but with no
- * scan parameters (fts_dump_reg showed "Param status:0x00", touch-point count
- * stuck at 0, INT never asserted). focaltech_flash_ft8756.c writes dram
- * unconditionally; match it. fts_dram_write_ecc() self-skips if the blob
- * carries no dram section. */
-#define FTS_FLASH_DRWR_SUPPORT                      1
+#define FTS_FLASH_DRWR_SUPPORT                      0
 #define FTS_FLASH_HALF_LENGTH                       0
 #define FTS_CMD_ECC_LENGTH_MAX                      (128 * 1024)
 #define FTS_ROMBOOT_CMD_ECC_FINISH_OK               0xA5
