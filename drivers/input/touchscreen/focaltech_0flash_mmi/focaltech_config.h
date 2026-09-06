@@ -239,8 +239,14 @@
 /********************** Upgrade ****************************/
 /*
  * auto upgrade
+ *
+ * ginna: FT8006S_AA here is 0-flash - its SRAM is empty on every power-on, so
+ * the app firmware MUST be downloaded during probe. With this 0 the driver
+ * only detected "need download fw" from inside the IRQ handler
+ * (fts_read_touchdata -> fts_fw_recovery), which never runs because a chip
+ * with no firmware never asserts the touch INT. Must be 1.
  */
-#define FTS_AUTO_UPGRADE_EN                     0
+#define FTS_AUTO_UPGRADE_EN                     1
 
 /*
  * auto upgrade for lcd cfg

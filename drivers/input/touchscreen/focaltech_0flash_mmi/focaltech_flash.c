@@ -564,8 +564,20 @@ static void fts_fwupg_work(struct work_struct *work)
         return ;
     }
 
-    /* get fw */
-    ret = fts_fwupg_get_fw_file(upg);
+    /* get fw - at cold boot the userspace firmware loader isn't ready for
+     * several seconds (request_firmware returns -EAGAIN), so retry. This IC is
+     * 0-flash: SRAM is empty on every power-on and the app firmware MUST be
+     * downloaded here or touch never works. */
+    {
+        int tries;
+        for (tries = 0; tries < 20; tries++) {
+            ret = fts_fwupg_get_fw_file(upg);
+            if (ret >= 0)
+                break;
+            FTS_INFO("fw file not ready yet (try %d), retry in 1s", tries);
+            msleep(1000);
+        }
+    }
     if (ret < 0) {
         FTS_ERROR("get file fail, can't upgrade");
         return ;
