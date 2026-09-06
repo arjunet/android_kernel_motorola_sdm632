@@ -1,0 +1,16 @@
+config TOUCHSCREEN_FOCALTECH_0FLASH_MMI
+	bool "FocalTech 0-flash touchscreen (ginna, SPI, dual-source w/ ChipOne)"
+	depends on SPI_MASTER
+	default n
+	help
+	  FocalTech FT8756-family touch controller found on some ginna
+	  (Moto E 2020) panel variants (compatible = "focaltech,fts",
+	  panel-supplier "hlt"), communicating over SPI. Ported from Motorola's
+	  out-of-tree motorola-kernel-modules (android-10-release-qzk,
+	  drivers/input/touchscreen/focaltech_0flash_mmi) since it was never
+	  carried into the mainline kernel-msm/LineageOS tree (which only kept
+	  the older I2C-only focaltech_touch/focaltech_mmi drivers).
+
+	  Built for the FT8756/FT8006S_AA/FT8009 SPI protocol family
+	  (focaltech_spi_v1_1_1.c) as the closest match for a 2020 budget
+	  Motorola panel; the exact chip ID isn't independently confirmed.
