@@ -8,9 +8,7 @@
 
 ccflags-y += -I$(srctree)/$(src) -I$(srctree)/$(src)/focaltech_test
 # ginna: TWRP loads focaltech-hlt-ft8006s_aa-*-ginna.bin -> this unit is
-# FT8006S_AA (chip id 0x86 0x32), not FT8756. focaltech_test_ft8006sp.c is
-# not in this tree, so the self-test module falls back to the ft8756 entry
-# (see focaltech_test/focaltech_test.c) - factory test only, unused for touch.
+# FT8006S_AA (chip id 0x86 0x32), not FT8756.
 ccflags-y += -DCONFIG_INPUT_FOCALTECH_0FLASH_MMI_IC_NAME_FT8006S_AA
 
 obj-$(CONFIG_TOUCHSCREEN_FOCALTECH_0FLASH_MMI) += focaltech_0flash_mmi.o
@@ -24,6 +22,6 @@ focaltech_0flash_mmi-objs += focaltech_gesture.o
 focaltech_0flash_mmi-objs += focaltech_point_report_check.o
 focaltech_0flash_mmi-objs += focaltech_test/focaltech_test.o
 focaltech_0flash_mmi-objs += focaltech_test/focaltech_test_ini.o
-focaltech_0flash_mmi-objs += focaltech_test/supported_ic/focaltech_test_ft8756.o
+focaltech_0flash_mmi-objs += focaltech_test/supported_ic/focaltech_test_ft8006sp.o
 focaltech_0flash_mmi-objs += focaltech_flash_ft8006s.o
 focaltech_0flash_mmi-objs += focaltech_spi_v1_1_1.o
