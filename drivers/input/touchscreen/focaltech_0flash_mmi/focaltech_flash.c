@@ -42,16 +42,6 @@
 /* Example: focaltech_ts_fw_tianma.bin */
 #define FTS_FW_NAME_PREX_WITH_REQUEST               ""
 
-/* ginna: the shipped focaltech-hlt-ft8006s_aa-*-ginna.bin is a dual-app image:
- *   [app1 @ 0][app2 @ FTS_MAX_LEN_APP]
- * both are complete 8051 images. Loading app1 (the default) leaves the touch
- * scan engine unconfigured - "fw mode" but Param status:0x00, register 0x02
- * (touch count) and the chip's INT count both stuck at 0, so no touch IRQ
- * ever fires. app2 is what fts_enter_test_environment(1) loads; on this hlt
- * panel it appears to be the production firmware. Offset every boot-time
- * download into app2. Set back to 0 to use app1. */
-#define GINNA_FW_APP_OFFSET                         FTS_MAX_LEN_APP
-
 /*****************************************************************************
 * Global variable or extern global variabls/functions
 *****************************************************************************/
@@ -304,10 +294,10 @@ int fts_fw_resume(bool need_reset)
         FTS_ERROR("%s:firmware(%s) request fail,ret=%d\n",
                   __func__, fwname, ret);
         FTS_INFO("download fw from bootimage");
-        ret = fts_fw_download(upg->fw + GINNA_FW_APP_OFFSET, upg->fw_length, need_reset);
+        ret = fts_fw_download(upg->fw, upg->fw_length, need_reset);
     } else {
         FTS_INFO("firmware(%s) request successfully", fwname);
-        ret = fts_fw_download(fw->data + GINNA_FW_APP_OFFSET, fw->size, need_reset);
+        ret = fts_fw_download(fw->data, fw->size, need_reset);
     }
     if (ret < 0) {
         FTS_ERROR("fw resume download failed");
@@ -603,7 +593,7 @@ static void fts_fwupg_work(struct work_struct *work)
         return ;
     }
 
-    ret = fts_fw_download(upg->fw + GINNA_FW_APP_OFFSET, upg->fw_length, true);
+    ret = fts_fw_download(upg->fw, upg->fw_length, true);
     if (ret < 0) {
         FTS_ERROR("fw auto download failed");
     } else {
