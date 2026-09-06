@@ -47,11 +47,12 @@ struct test_funcs *test_func_list[] = {
 #ifdef CONFIG_INPUT_FOCALTECH_0FLASH_MMI_IC_NAME_FT8719
     &test_func_ft8719,
 #endif
-#ifdef CONFIG_INPUT_FOCALTECH_0FLASH_MMI_IC_NAME_FT8006S_AA
-    &test_func_ft8006sp,
-#endif
+/* ginna: focaltech_test_ft8006sp.c (defining test_func_ft8006sp) was never
+ * carried into this tree; fall back to the ft8756 self-test entry for
+ * FT8006S_AA. Only affects factory raw-data self-test, not touch operation. */
 #if defined(CONFIG_INPUT_FOCALTECH_0FLASH_MMI_IC_NAME_FT8756) || \
-	defined (CONFIG_INPUT_FOCALTECH_0FLASH_MMI_IC_NAME_FT8009)
+	defined (CONFIG_INPUT_FOCALTECH_0FLASH_MMI_IC_NAME_FT8009) || \
+	defined (CONFIG_INPUT_FOCALTECH_0FLASH_MMI_IC_NAME_FT8006S_AA)
     &test_func_ft8756,
 #endif
 };

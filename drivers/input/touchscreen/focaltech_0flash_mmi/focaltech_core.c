@@ -332,13 +332,18 @@ static int fts_get_ic_information(struct fts_ts_data *ts_data)
 
         ret = fts_read_bootid(ts_data, &chip_id[0]);
         if (ret <  0) {
-            FTS_DEBUG("read boot id fail,retry:%d", cnt);
+            FTS_INFO("read boot id fail,retry:%d", cnt);
             continue;
         }
 
+        /* ginna DEBUG: log the raw boot id so we can confirm SPI reads real
+         * data and see the actual chip id. Remove once FT8006S is confirmed. */
+        FTS_INFO("boot id read: 0x%02x 0x%02x", chip_id[0], chip_id[1]);
+
         ret = fts_get_chip_types(ts_data, chip_id[0], chip_id[1], INVALID);
         if (ret < 0) {
-            FTS_DEBUG("can't get ic informaton,retry:%d", cnt);
+            FTS_INFO("chip type no match for 0x%02x%02x,retry:%d",
+                     chip_id[0], chip_id[1], cnt);
             continue;
         }
 
