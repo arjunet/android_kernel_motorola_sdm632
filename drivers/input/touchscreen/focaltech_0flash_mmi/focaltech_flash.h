@@ -1,5 +1,5 @@
 /************************************************************************
-* Copyright (C) 2012-2019, Focaltech Systems (R)£¬All Rights Reserved.
+* Copyright (C) 2012-2019, Focaltech Systems (R)ï¿½ï¿½All Rights Reserved.
 *
 * File Name: focaltech_flash.h
 *
@@ -92,7 +92,10 @@
 #define FTS_FW_BIN_FILEPATH                         "/sdcard/"
 #define FTS_FW_IDE_SIG                              "IDE_"
 #define FTS_FW_IDE_SIG_LEN                          4
-#define MAX_MODULE_VENDOR_NAME_LEN                  16
+/* ginna: was 16 - too small for the Motorola blob name
+ * "focaltech-hlt-ft8006s_aa-0b-0000-ginna" (38 chars), which got truncated
+ * to "focaltech-hlt-ft" so request_firmware asked for "focaltech-hlt-ft.bin". */
+#define MAX_MODULE_VENDOR_NAME_LEN                  64
 
 #define FTS_ROMBOOT_CMD_ECC_NEW_LEN                 7
 #define FTS_ECC_FINISH_TIMEOUT                      100
