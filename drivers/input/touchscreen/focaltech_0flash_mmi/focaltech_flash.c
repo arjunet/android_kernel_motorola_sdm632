@@ -600,6 +600,11 @@ static void fts_fwupg_work(struct work_struct *work)
         msleep(50);
         ret = fts_read_reg(FTS_REG_CHIP_ID, &chip_id);
         FTS_INFO("read chip id:0x%02x", chip_id);
+        /* ginna: match fts_fw_recovery() - after a 0-flash download the chip
+         * must be taken back to normal scan mode (fts_wait_tp_to_valid +
+         * fts_ex_mode_recovery), otherwise it runs the app but never asserts
+         * the touch INT. */
+        fts_tp_state_recovery(upg->ts_data);
     }
 }
 
