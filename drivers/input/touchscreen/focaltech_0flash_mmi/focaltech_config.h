@@ -275,8 +275,13 @@
  * then file_name will be "focaltech_ts_fw_tianma"
  * You should rename fw to "focaltech_ts_fw_tianma", and push it into
  * etc/firmware or by customers
+ *
+ * ginna: FTS_FW_NAME_PREX_WITH_REQUEST is "" in focaltech_flash.c, so the
+ * request_firmware name is exactly FTS_MODULE_NAME + ".bin". Match the blob
+ * already shipped in /vendor/firmware on this device (hlt panel, FT8006S_AA):
+ * focaltech-hlt-ft8006s_aa-0b-0000-ginna.bin
  */
-#define FTS_MODULE_NAME                        ""
+#define FTS_MODULE_NAME                        "focaltech-hlt-ft8006s_aa-0b-0000-ginna"
 #define FTS_MODULE2_NAME                       ""
 #define FTS_MODULE3_NAME                       ""
 
