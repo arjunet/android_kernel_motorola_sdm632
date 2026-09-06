@@ -957,7 +957,12 @@ static int fts_irq_registration(struct fts_ts_data *ts_data)
     struct fts_ts_platform_data *pdata = ts_data->pdata;
 
     ts_data->irq = gpio_to_irq(pdata->irq_gpio);
-    pdata->irq_gpio_flags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
+    /* ginna: the DT touch node declares "interrupts = <65 0x2008>" =
+     * IRQ_TYPE_LEVEL_LOW. This revision hardcoded IRQF_TRIGGER_FALLING, which
+     * conflicts with the already-mapped type ("irq: type mismatch, failed to
+     * map hwirq-65") so the handler was never wired up and no touch IRQ ever
+     * fired. FT8006S INT is active-low level anyway. */
+    pdata->irq_gpio_flags = IRQF_TRIGGER_LOW | IRQF_ONESHOT;
     FTS_INFO("irq:%d, flag:%x", ts_data->irq, pdata->irq_gpio_flags);
     ret = request_threaded_irq(ts_data->irq, NULL, fts_irq_handler,
                                pdata->irq_gpio_flags,
