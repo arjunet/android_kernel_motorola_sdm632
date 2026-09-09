@@ -246,18 +246,6 @@
 };
 
 
-/*
- * Allow writing the PMIC RTC. Stock Moto ships it read-only
- * (qcom,qpnp-rtc-write = 0) because Android keeps time in the framework.
- * Ubuntu Touch has no such daemon and this phone has no separate RTC
- * backup cell - the qpnp counter runs off the main battery - so let
- * userspace seed it, and the time then survives reboots.
- */
-&pm8953_rtc {
-	qcom,qpnp-rtc-write = <1>;
-};
-
-
 &pm8953_vadc {
 	pinctrl-0 = <&chg_therm_default &msm_therm_default>;
 	/delete-node/ chan@11;
