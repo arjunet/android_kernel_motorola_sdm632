@@ -566,13 +566,6 @@ CONFIG_EDAC=y
 CONFIG_EDAC_MM_EDAC=y
 CONFIG_RTC_CLASS=y
 CONFIG_RTC_DRV_QPNP=y
-# Load the PMIC RTC into the system clock at early boot, before any userspace
-# runs - so the very first thing drawn (including OOBE) has correct time
-# without depending on a daemon or script. Needs qcom,qpnp-rtc-write=1 in the
-# ginna DT overlay (stock ships it read-only) for the RTC to ever hold a real
-# value in the first place.
-CONFIG_RTC_HCTOSYS=y
-CONFIG_RTC_HCTOSYS_DEVICE="rtc0"
 CONFIG_DMADEVICES=y
 CONFIG_QCOM_SPS_DMA=y
 CONFIG_UIO=y
